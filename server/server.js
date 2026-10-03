@@ -1,4 +1,5 @@
 import "dotenv/config";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
 import express from "express";
 import cors from "cors";
@@ -23,6 +24,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/complaints", complaintRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

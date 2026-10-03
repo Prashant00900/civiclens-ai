@@ -1,3 +1,4 @@
+import { analyzeComplaint } from "../services/aiService.js";
 import Complaint, { CATEGORIES, STATUSES } from "../models/Complaint.js";
 import Department from "../models/Department.js";
 import uploadImage from "../utils/uploadImage.js";
@@ -29,10 +30,24 @@ export const createComplaint = async (req, res) => {
     return res.status(400).json({ message: "At least one photo is required" });
   }
 
-  const finalCategory = CATEGORIES.includes(category) ? category : "other";
-  const images = await Promise.all(req.files.map((f) => uploadImage(f.buffer)));
+  const userCategory = CATEGORIES.includes(category) ? category : "other";
 
-  // abhi simple routing: category se department. Baad me AI isse replace karega
+  // photo upload aur AI analysis ek saath chalte hain
+  const [images, ai] = await Promise.all([
+    Promise.all(req.files.map((f) => uploadImage(f.buffer))),
+    analyzeComplaint({
+      title,
+      description,
+      imageBuffer: req.files[0].buffer,
+      mimeType: req.files[0].mimetype,
+    }),
+  ]);
+
+  // AI chal gaya to uska jawab, warna user ki category aur default values
+  const finalCategory = ai?.category ?? userCategory;
+  const severity = ai?.severity ?? 1;
+  const priorityScore = severity * 20;
+
   const dept = await Department.findOne({ categories: finalCategory });
 
   const complaint = await Complaint.create({
@@ -40,10 +55,13 @@ export const createComplaint = async (req, res) => {
     title,
     description,
     category: finalCategory,
+    severity,
+    priorityScore,
+    aiSummary: ai?.summary,
     address,
     images,
     department: dept?._id,
-    location: { type: "Point", coordinates: [lng, lat] }, // pehle longitude
+    location: { type: "Point", coordinates: [lng, lat] },
     statusHistory: [
       { status: "submitted", by: req.user._id, note: "Complaint submitted" },
     ],

@@ -41,6 +41,7 @@ const complaintSchema = new mongoose.Schema(
     category: { type: String, enum: CATEGORIES, default: "other" },
     severity: { type: Number, min: 1, max: 5, default: 1 },
     priorityScore: { type: Number, default: 0 },
+        aiSummary: { type: String },
     location: {
       type: { type: String, enum: ["Point"], default: "Point" },
       coordinates: { type: [Number], required: true }, // [lng, lat]
