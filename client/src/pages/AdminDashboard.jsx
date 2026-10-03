@@ -103,7 +103,13 @@ export default function AdminDashboard() {
               <p className="font-semibold mb-2">By category</p>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                  <Pie data={summary.byCategory} dataKey="value" nameKey="name" outerRadius={80} label>
+                                    <Pie
+                    data={summary.byCategory}
+                    dataKey="value"
+                    nameKey="name"
+                    outerRadius={70}
+                    label={({ name, value }) => `${label(name)}: ${value}`}
+                  >
                     {summary.byCategory.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
