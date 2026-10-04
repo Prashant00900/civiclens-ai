@@ -49,7 +49,12 @@ export default function MyComplaints() {
           )}
           <div className="flex-1">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">{c.title}</h2>
+                            <Link
+                to={`/complaints/${c._id}`}
+                className="font-semibold text-blue-700 hover:underline"
+              >
+                {c.title}
+              </Link>
               <span
                 className={`text-xs px-2 py-1 rounded-full ${STATUS_STYLES[c.status]}`}
               >

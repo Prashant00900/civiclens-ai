@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MyComplaints from "./pages/MyComplaints";
 import NewComplaint from "./pages/NewComplaint";
+import ComplaintDetail from "./pages/ComplaintDetail";
 import AdminDashboard from "./pages/AdminDashboard";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -26,6 +27,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/new" element={<NewComplaint />} />
+          <Route path="/complaints/:id" element={<ComplaintDetail />} />
           <Route element={<ProtectedRoute roles={["admin", "officer"]} />}>
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>

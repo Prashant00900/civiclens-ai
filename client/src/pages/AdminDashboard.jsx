@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import api from "../services/api";
+import { Link } from "react-router-dom";
 
 const COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#6b7280"];
 
@@ -166,7 +167,12 @@ export default function AdminDashboard() {
               )}
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">{c.title}</h3>
+                                    <Link
+                    to={`/complaints/${c._id}`}
+                    className="font-semibold text-blue-700 hover:underline"
+                  >
+                    {c.title}
+                  </Link>
                   <span className={`text-xs px-2 py-1 rounded-full ${STATUS_STYLES[c.status]}`}>
                     {label(c.status)}
                   </span>
@@ -218,4 +224,4 @@ export default function AdminDashboard() {
       )}
     </div>
   );
-}
+} 

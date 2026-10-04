@@ -80,8 +80,8 @@ export const getMyComplaints = async (req, res) => {
 export const getComplaintById = async (req, res) => {
   const complaint = await Complaint.findById(req.params.id)
     .populate("reportedBy", "name email")
-    .populate("department", "name")
-    .populate("assignedTo", "name email")
+    .populate("department", "name phone email officeAddress slaHours")
+    .populate("assignedTo", "name")
     .populate("statusHistory.by", "name role");
 
   if (!complaint) return res.status(404).json({ message: "Complaint not found" });
@@ -90,7 +90,17 @@ export const getComplaintById = async (req, res) => {
   if (req.user.role === "citizen" && !isOwner) {
     return res.status(403).json({ message: "Access denied" });
   }
-  res.json(complaint);
+
+  const data = complaint.toObject();
+  const sla = complaint.department?.slaHours;
+  if (sla) {
+    data.dueAt = new Date(complaint.createdAt.getTime() + sla * 3600 * 1000);
+    data.isOverdue =
+      !["resolved", "rejected"].includes(complaint.status) &&
+      data.dueAt < new Date();
+  }
+
+  res.json(data);
 };
 
 export const getComplaints = async (req, res) => {
