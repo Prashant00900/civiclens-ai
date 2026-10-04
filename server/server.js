@@ -1,4 +1,5 @@
 import "dotenv/config";
+import assistantRoutes from "./routes/assistantRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
 import express from "express";
@@ -26,6 +27,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
+app.use("/api/assistant", assistantRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

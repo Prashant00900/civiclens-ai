@@ -1,4 +1,5 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
+import ChatAssistant from "./ChatAssistant";
 import { useAuth } from "../context/AuthContext";
 
 export default function Layout() {
@@ -45,6 +46,7 @@ export default function Layout() {
       <main className="max-w-6xl mx-auto p-6">
         <Outlet />
       </main>
+            {user.role === "citizen" && <ChatAssistant />}
     </div>
   );
 }
