@@ -16,6 +16,9 @@ Civic complaints usually arrive on WhatsApp, calls or paper. There is no trackin
 - Register and login with secure cookie-based sessions
 - Submit a complaint with photos, description and GPS location
 - Track each complaint with a unique tracking ID and status
+- Complaint detail page with department helpline, email, expected resolution date (SLA) and a full status timeline
+- AI assistant chat in Hindi, Hinglish, Punjabi or English that answers questions about the citizen's own complaints (rate limited, never reveals other users' data)
+- Voice input for the assistant (Chrome and Edge)
 
 **AI (Google Gemini)**
 - Reads the photo and description together
