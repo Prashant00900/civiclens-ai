@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -12,6 +12,11 @@ const CATEGORIES = [
   { value: "other", label: "Other" },
 ];
 
+const MAX_PHOTO_MB = 4;
+
+const inputClass =
+  "w-full border border-line bg-white rounded px-3 py-2 focus:border-teal";
+
 export default function NewComplaint() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -23,17 +28,32 @@ export default function NewComplaint() {
     lng: "",
   });
   const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [files]);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleFiles = (e) => setFiles(Array.from(e.target.files).slice(0, 3));
+  const handleFiles = (e) => {
+    const picked = Array.from(e.target.files).slice(0, 3);
+    if (picked.some((f) => f.size > MAX_PHOTO_MB * 1024 * 1024)) {
+      toast.error(`Each photo must be under ${MAX_PHOTO_MB} MB`);
+      e.target.value = "";
+      return;
+    }
+    setFiles(picked);
+  };
 
   const useMyLocation = () => {
     if (!navigator.geolocation) {
-      return toast.error("Location is not supported in this browser");
+      return toast.error("This browser cannot share your location");
     }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
@@ -48,7 +68,7 @@ export default function NewComplaint() {
       },
       () => {
         setLocating(false);
-        toast.error("Could not get location. Please allow location access.");
+        toast.error("Could not get your location. Allow location access and try again.");
       }
     );
   };
@@ -56,10 +76,10 @@ export default function NewComplaint() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.lat || !form.lng) {
-      return toast.error("Please capture your location first");
+      return toast.error("Add your location first");
     }
     if (files.length === 0) {
-      return toast.error("Please add at least one photo");
+      return toast.error("Add at least one photo");
     }
 
     const data = new FormData();
@@ -69,95 +89,162 @@ export default function NewComplaint() {
     setSubmitting(true);
     try {
       const res = await api.post("/complaints", data);
-      toast.success(`Submitted! Tracking ID: ${res.data.trackingId}`);
+      if (res.data.merged) {
+        toast.success(
+          res.data.alreadyReported
+            ? `You already reported this. Tracking ID: ${res.data.trackingId}`
+            : `Same problem was already reported nearby. Your report was added (${res.data.reportCount} reports). Tracking ID: ${res.data.trackingId}`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.success(`Complaint sent. Tracking ID: ${res.data.trackingId}`);
+      }
       navigate("/");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Could not submit complaint");
+      toast.error(err.response?.data?.message || "Could not send the complaint");
     } finally {
       setSubmitting(false);
     }
   };
 
-  
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-xl shadow space-y-4"
+      className="max-w-2xl bg-white border border-line rounded-md p-5 sm:p-6 space-y-6"
     >
-      <h1 className="text-xl font-bold">Report a problem</h1>
-
-      <input
-        name="title"
-        placeholder="Title (e.g. Pothole near school)"
-        value={form.title}
-        onChange={handleChange}
-        required
-        className="w-full border rounded-lg p-2"
-      />
-
-      <textarea
-        name="description"
-        placeholder="Describe the problem"
-        value={form.description}
-        onChange={handleChange}
-        required
-        rows={4}
-        className="w-full border rounded-lg p-2"
-      />
-
-      <select
-        name="category"
-        value={form.category}
-        onChange={handleChange}
-        className="w-full border rounded-lg p-2"
-      >
-        {CATEGORIES.map((c) => (
-          <option key={c.value} value={c.value}>
-            {c.label}
-          </option>
-        ))}
-      </select>
-
-      <input
-        name="address"
-        placeholder="Address or landmark"
-        value={form.address}
-        onChange={handleChange}
-        className="w-full border rounded-lg p-2"
-      />
-
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={useMyLocation}
-          disabled={locating}
-          className="bg-gray-800 text-white px-4 py-2 rounded-lg disabled:opacity-50"
-        >
-          {locating ? "Getting location..." : "Use my location"}
-        </button>
-        <span className="text-sm text-gray-600">
-          {form.lat ? `${form.lat}, ${form.lng}` : "Not captured yet"}
-        </span>
+      <div>
+        <h1 className="text-2xl font-bold">Report a problem</h1>
+        <p className="text-ink-soft mt-1">
+          Add a photo and your location. AI will check the category and how
+          urgent it is.
+        </p>
       </div>
 
-      <div>
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium mb-1">
+            Title
+          </label>
+          <input
+            id="title"
+            name="title"
+            placeholder="Pothole near school gate"
+            value={form.title}
+            onChange={handleChange}
+            required
+            maxLength={120}
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium mb-1">
+            What is wrong?
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            placeholder="Tell us what you see and how long it has been like this"
+            value={form.description}
+            onChange={handleChange}
+            required
+            rows={4}
+            className={inputClass}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="category" className="block text-sm font-medium mb-1">
+            Category
+          </label>
+          <select
+            id="category"
+            name="category"
+            value={form.category}
+            onChange={handleChange}
+            className={inputClass}
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-ink-soft mt-1">
+            If this does not match your photo, AI will correct it.
+          </p>
+        </div>
+      </div>
+
+      <div className="border-t border-line pt-5 space-y-3">
+        <h2 className="font-bold">Where is it?</h2>
+        <div>
+          <label htmlFor="address" className="block text-sm font-medium mb-1">
+            Address or landmark
+          </label>
+          <input
+            id="address"
+            name="address"
+            placeholder="Main Road, near the school gate"
+            value={form.address}
+            onChange={handleChange}
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={useMyLocation}
+            disabled={locating}
+            className="border border-ink rounded px-4 py-2 font-medium hover:bg-paper disabled:opacity-50"
+          >
+            {locating ? "Getting location..." : "Use my current location"}
+          </button>
+          {form.lat ? (
+            <span className="text-sm text-teal font-medium">
+              Location added ({form.lat}, {form.lng})
+            </span>
+          ) : (
+            <span className="text-sm text-ink-soft">
+              Stand near the problem and tap the button.
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-line pt-5 space-y-3">
+        <h2 className="font-bold">Photos</h2>
         <input
           type="file"
           accept="image/png, image/jpeg, image/webp"
           multiple
           onChange={handleFiles}
+          className="block text-sm"
         />
-        <p className="text-xs text-gray-500 mt-1">
-          Up to 3 photos, max 5MB each ({files.length} selected)
+        <p className="text-xs text-ink-soft">
+          Up to 3 photos, {MAX_PHOTO_MB} MB each. Only photos of the problem,
+          not of people.
         </p>
+        {previews.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {previews.map((src) => (
+              <img
+                key={src}
+                src={src}
+                alt="Selected photo"
+                className="w-20 h-20 object-cover rounded border border-line"
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <button
         type="submit"
         disabled={submitting}
-        className="w-full bg-blue-600 text-white rounded-lg p-2 hover:bg-blue-700 disabled:opacity-50"
+        className="w-full sm:w-auto bg-teal text-white font-medium rounded px-6 py-2.5 hover:bg-teal-dark disabled:opacity-50"
       >
-        {submitting ? "Submitting..." : "Submit complaint"}
+        {submitting ? "Sending..." : "Send complaint"}
       </button>
     </form>
   );

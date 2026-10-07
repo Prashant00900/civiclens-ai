@@ -16,7 +16,7 @@ export default function ChatAssistant() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      text: "Namaste! Main aapki complaints ke baare me madad kar sakta hoon. Hindi, Hinglish, Punjabi ya English me poochiye.",
+      text: "Namaste! Ask me about your complaints in Hindi, Hinglish, Punjabi or English.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -72,7 +72,7 @@ export default function ChatAssistant() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700"
+        className="fixed bottom-5 right-5 bg-ink text-white font-medium px-5 py-3 rounded-full border-2 border-signal shadow-lg hover:bg-black"
       >
         Ask AI
       </button>
@@ -80,29 +80,33 @@ export default function ChatAssistant() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 w-80 h-[28rem] bg-white rounded-xl shadow-2xl flex flex-col border">
-      <div className="flex items-center justify-between bg-blue-600 text-white px-4 py-3 rounded-t-xl">
-        <span className="font-semibold">CivicLens Assistant</span>
-        <button onClick={() => setOpen(false)} className="text-sm">
+    <div className="fixed bottom-5 right-5 w-[calc(100vw-2.5rem)] sm:w-96 h-[30rem] max-h-[80vh] bg-white border-2 border-ink rounded-md shadow-2xl flex flex-col">
+      <div className="flex items-center justify-between bg-ink text-white px-4 py-3">
+        <span className="font-display font-bold">CivicLens assistant</span>
+        <button
+          onClick={() => setOpen(false)}
+          className="text-sm text-white/80 hover:text-white"
+        >
           Close
         </button>
       </div>
+      <div className="centerline" />
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2" aria-live="polite">
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`max-w-[85%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap ${
+            className={`max-w-[85%] px-3 py-2 rounded text-sm whitespace-pre-wrap ${
               m.role === "user"
-                ? "bg-blue-600 text-white ml-auto"
-                : "bg-gray-100 text-gray-800"
+                ? "bg-teal text-white ml-auto"
+                : "bg-paper text-ink"
             }`}
           >
             {m.text}
           </div>
         ))}
         {sending && (
-          <div className="bg-gray-100 text-gray-500 px-3 py-2 rounded-lg text-sm w-fit">
+          <div className="bg-paper text-ink-soft px-3 py-2 rounded text-sm w-fit">
             Typing...
           </div>
         )}
@@ -112,7 +116,7 @@ export default function ChatAssistant() {
               <button
                 key={s}
                 onClick={() => send(s)}
-                className="text-xs border border-blue-300 text-blue-700 rounded-full px-3 py-1 hover:bg-blue-50"
+                className="text-xs border border-ink rounded-full px-3 py-1 hover:bg-paper"
               >
                 {s}
               </button>
@@ -122,30 +126,33 @@ export default function ChatAssistant() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="flex items-center gap-2 p-2 border-t">
+      <div className="flex items-center gap-2 p-2 border-t border-line">
         {SpeechRecognition && (
           <button
             onClick={listen}
             title="Speak in Hindi"
-            className={`px-2 py-2 rounded-lg text-sm ${
-              listening ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
+            className={`px-3 py-2 rounded text-sm border ${
+              listening
+                ? "bg-signal border-ink"
+                : "border-line hover:bg-paper"
             }`}
           >
-            {listening ? "Listening" : "Mic"}
+            {listening ? "Listening" : "Speak"}
           </button>
         )}
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="Apna sawal likhiye..."
+          placeholder="Type your question"
+          aria-label="Your question"
           maxLength={500}
-          className="flex-1 border rounded-lg px-3 py-2 text-sm"
+          className="flex-1 min-w-0 border border-line rounded px-3 py-2 text-sm focus:border-teal"
         />
         <button
           onClick={() => send()}
           disabled={sending}
-          className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm disabled:opacity-50"
+          className="bg-teal text-white px-4 py-2 rounded text-sm font-medium hover:bg-teal-dark disabled:opacity-50"
         >
           Send
         </button>

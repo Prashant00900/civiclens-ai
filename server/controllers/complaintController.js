@@ -32,22 +32,55 @@ export const createComplaint = async (req, res) => {
 
   const userCategory = CATEGORIES.includes(category) ? category : "other";
 
-  // photo upload aur AI analysis ek saath chalte hain
-  const [images, ai] = await Promise.all([
-    Promise.all(req.files.map((f) => uploadImage(f.buffer))),
-    analyzeComplaint({
-      title,
-      description,
-      imageBuffer: req.files[0].buffer,
-      mimeType: req.files[0].mimetype,
-    }),
-  ]);
-
-  // AI chal gaya to uska jawab, warna user ki category aur default values
+  // pehle AI, taaki sahi category pata chale
+  const ai = await analyzeComplaint({
+    title,
+    description,
+    imageBuffer: req.files[0].buffer,
+    mimeType: req.files[0].mimetype,
+  });
   const finalCategory = ai?.category ?? userCategory;
   const severity = ai?.severity ?? 1;
-  const priorityScore = severity * 20;
 
+  // duplicate check: 100 meter ke andar, wahi category, abhi khuli
+  const existing = await Complaint.findOne({
+    category: finalCategory,
+    status: { $in: ["submitted", "assigned", "in_progress"] },
+    location: {
+      $near: {
+        $geometry: { type: "Point", coordinates: [lng, lat] },
+        $maxDistance: 100,
+      },
+    },
+  });
+
+  if (existing) {
+    const uid = String(req.user._id);
+    const already =
+      String(existing.reportedBy) === uid ||
+      existing.supporters.some((s) => String(s) === uid);
+
+    if (!already) {
+      existing.supporters.push(req.user._id);
+      existing.reportCount += 1;
+      existing.severity = Math.max(existing.severity, severity);
+      existing.priorityScore = Math.min(
+        100,
+        existing.severity * 20 + (existing.reportCount - 1) * 5
+      );
+      await existing.save();
+    }
+
+    return res.status(200).json({
+      merged: true,
+      alreadyReported: already,
+      trackingId: existing.trackingId,
+      reportCount: existing.reportCount,
+    });
+  }
+
+  // duplicate nahi mila, to ab photo upload karke nayi complaint
+  const images = await Promise.all(req.files.map((f) => uploadImage(f.buffer)));
   const dept = await Department.findOne({ categories: finalCategory });
 
   const complaint = await Complaint.create({
@@ -56,7 +89,7 @@ export const createComplaint = async (req, res) => {
     description,
     category: finalCategory,
     severity,
-    priorityScore,
+    priorityScore: severity * 20,
     aiSummary: ai?.summary,
     address,
     images,
@@ -71,7 +104,9 @@ export const createComplaint = async (req, res) => {
 };
 
 export const getMyComplaints = async (req, res) => {
-  const items = await Complaint.find({ reportedBy: req.user._id })
+  const items = await Complaint.find({
+    $or: [{ reportedBy: req.user._id }, { supporters: req.user._id }],
+  })
     .sort({ createdAt: -1 })
     .populate("department", "name");
   res.json(items);
@@ -86,8 +121,10 @@ export const getComplaintById = async (req, res) => {
 
   if (!complaint) return res.status(404).json({ message: "Complaint not found" });
 
-  const isOwner = String(complaint.reportedBy._id) === String(req.user._id);
-  if (req.user.role === "citizen" && !isOwner) {
+  const uid = String(req.user._id);
+  const isOwner = String(complaint.reportedBy._id) === uid;
+  const isSupporter = complaint.supporters.some((s) => String(s) === uid);
+  if (req.user.role === "citizen" && !isOwner && !isSupporter) {
     return res.status(403).json({ message: "Access denied" });
   }
 
@@ -98,6 +135,17 @@ export const getComplaintById = async (req, res) => {
     data.isOverdue =
       !["resolved", "rejected"].includes(complaint.status) &&
       data.dueAt < new Date();
+  }
+
+  if (req.user.role === "citizen") {
+    // doosre citizens ki pehchaan chhupao
+    delete data.reportedBy;
+    delete data.supporters;
+    data.statusHistory = data.statusHistory.map((h) =>
+      h.by?.role === "citizen" && String(h.by._id) !== uid
+        ? { ...h, by: { name: "Another citizen", role: "citizen" } }
+        : h
+    );
   }
 
   res.json(data);

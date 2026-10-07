@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import AuthShell from "../components/AuthShell";
+
+const inputClass =
+  "w-full border border-line bg-white rounded px-3 py-2 focus:border-teal";
 
 export default function Register() {
   const { register } = useAuth();
@@ -17,67 +21,86 @@ export default function Register() {
     setSubmitting(true);
     try {
       await register(form.name, form.email, form.password);
-      toast.success("Account created!");
+      toast.success("Account created");
       navigate("/");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
+      toast.error(
+        err.response?.data?.message ||
+          "Could not create the account. The server may be waking up, wait a minute and try again."
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-xl shadow w-full max-w-sm space-y-4"
-      >
-        <h1 className="text-2xl font-bold text-center">CivicLens AI</h1>
-        <p className="text-center text-gray-500">Create your account</p>
-
-        <input
-          name="name"
-          placeholder="Full name"
-          value={form.name}
-          onChange={handleChange}
-          required
-          className="w-full border rounded-lg p-2"
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          required
-          className="w-full border rounded-lg p-2"
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password (min 6 characters)"
-          value={form.password}
-          onChange={handleChange}
-          required
-          minLength={6}
-          className="w-full border rounded-lg p-2"
-        />
-
+    <AuthShell
+      title="Create your account"
+      subtitle="It takes a minute. You can then report problems and track them."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link to="/login" className="text-teal font-medium underline">
+            Log in
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium mb-1">
+            Full name
+          </label>
+          <input
+            id="name"
+            name="name"
+            autoComplete="name"
+            value={form.name}
+            onChange={handleChange}
+            required
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium mb-1">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            value={form.email}
+            onChange={handleChange}
+            required
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium mb-1">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            value={form.password}
+            onChange={handleChange}
+            required
+            minLength={6}
+            className={inputClass}
+          />
+          <p className="text-xs text-ink-soft mt-1">At least 6 characters.</p>
+        </div>
         <button
           type="submit"
           disabled={submitting}
-          className="w-full bg-blue-600 text-white rounded-lg p-2 hover:bg-blue-700 disabled:opacity-50"
+          className="w-full bg-teal text-white font-medium rounded py-2.5 hover:bg-teal-dark disabled:opacity-50"
         >
-          {submitting ? "Creating..." : "Register"}
+          {submitting ? "Creating account..." : "Create account"}
         </button>
-
-        <p className="text-center text-sm">
-          Already have an account?{" "}
-          <Link to="/login" className="text-blue-600">
-            Login
-          </Link>
-        </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }

@@ -1,17 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../services/api";
+import {
+  StatusMark,
+  SeverityMeter,
+  PriorityTag,
+  STATUS,
+  categoryLabel,
+} from "../components/ui";
 
-const STATUS_STYLES = {
-  submitted: "bg-gray-200 text-gray-800",
-  assigned: "bg-blue-100 text-blue-800",
-  in_progress: "bg-yellow-100 text-yellow-800",
-  resolved: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
-};
-
-const label = (s) => s.replace("_", " ");
 const fmt = (d) => new Date(d).toLocaleString();
+
+function Row({ label, children }) {
+  return (
+    <div className="grid sm:grid-cols-[9rem_1fr] gap-x-4 py-2 border-b border-line last:border-0">
+      <dt className="text-ink-soft">{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
 
 export default function ComplaintDetail() {
   const { id } = useParams();
@@ -23,33 +30,29 @@ export default function ComplaintDetail() {
       .get(`/complaints/${id}`)
       .then((res) => setC(res.data))
       .catch((err) =>
-        setError(err.response?.data?.message || "Could not load complaint")
+        setError(err.response?.data?.message || "Could not load this complaint")
       );
   }, [id]);
 
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (!c) return <p>Loading...</p>;
+  if (error) return <p className="text-alert">{error}</p>;
+  if (!c) return <p className="text-ink-soft">Loading...</p>;
 
   const dept = c.department;
 
   return (
-    <div className="space-y-4">
-      <Link to="/" className="text-blue-600 text-sm">
-        Back
+    <div className="max-w-3xl space-y-4">
+      <Link to="/" className="text-sm text-teal font-medium underline">
+        Back to complaints
       </Link>
 
-      <div className="bg-white rounded-xl shadow p-5 space-y-3">
+      <section className="bg-white border border-line rounded-md p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-xl font-bold">{c.title}</h1>
-          <span
-            className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${STATUS_STYLES[c.status]}`}
-          >
-            {label(c.status)}
-          </span>
+          <h1 className="text-2xl font-bold leading-snug">{c.title}</h1>
+          <StatusMark status={c.status} />
         </div>
 
-        <p className="text-xs text-gray-500">
-          Tracking ID: {c.trackingId} · Reported on {fmt(c.createdAt)}
+        <p className="text-sm text-ink-soft">
+          {c.trackingId}, reported on {fmt(c.createdAt)}
         </p>
 
         {c.images?.length > 0 && (
@@ -59,102 +62,92 @@ export default function ComplaintDetail() {
                 <img
                   src={img.url}
                   alt={c.title}
-                  className="w-40 h-40 object-cover rounded-lg"
+                  className="w-40 h-40 object-cover rounded border border-line"
                 />
               </a>
             ))}
           </div>
         )}
 
-        <p className="text-gray-700">{c.description}</p>
-
+        <p>{c.description}</p>
         {c.aiSummary && (
-          <p className="text-sm text-purple-700">AI: {c.aiSummary}</p>
+          <p className="text-teal">AI summary: {c.aiSummary}</p>
         )}
 
-        <div className="flex flex-wrap gap-2 text-xs">
-          <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800">
-            Severity {c.severity}/5
-          </span>
-          <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-800">
-            Priority {c.priorityScore}
-          </span>
-          <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-            {label(c.category)}
-          </span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <SeverityMeter value={c.severity} />
+          <PriorityTag value={c.priorityScore} />
+          {c.reportCount > 1 && (
+            <span className="text-xs font-semibold text-teal">
+              {c.reportCount} people reported this
+            </span>
+          )}
         </div>
 
-        {c.address && (
-          <p className="text-sm text-gray-600">Location: {c.address}</p>
-        )}
-      </div>
+        <dl className="text-sm">
+          <Row label="Category">{categoryLabel(c.category)}</Row>
+          {c.address && <Row label="Location">{c.address}</Row>}
+        </dl>
+      </section>
 
-      <div className="bg-white rounded-xl shadow p-5 space-y-2">
-        <h2 className="font-semibold">Who is handling this</h2>
+      <section className="bg-white border border-line rounded-md p-5">
+        <h2 className="text-lg font-bold mb-2">Who is handling this</h2>
         {dept ? (
-          <>
-            <p>
-              <span className="text-gray-500">Department: </span>
-              {dept.name}
-            </p>
-            <p>
-              <span className="text-gray-500">Officer: </span>
-              {c.assignedTo?.name || "Not assigned yet"}
-            </p>
+          <dl>
+            <Row label="Department">{dept.name}</Row>
+            <Row label="Officer">{c.assignedTo?.name || "Not assigned yet"}</Row>
             {dept.phone && (
-              <p>
-                <span className="text-gray-500">Helpline: </span>
-                <a className="text-blue-600" href={`tel:${dept.phone}`}>
+              <Row label="Helpline">
+                <a className="text-teal underline" href={`tel:${dept.phone}`}>
                   {dept.phone}
                 </a>
-              </p>
+              </Row>
             )}
             {dept.email && (
-              <p>
-                <span className="text-gray-500">Email: </span>
-                <a className="text-blue-600" href={`mailto:${dept.email}`}>
+              <Row label="Email">
+                <a className="text-teal underline" href={`mailto:${dept.email}`}>
                   {dept.email}
                 </a>
-              </p>
+              </Row>
             )}
-            {dept.officeAddress && (
-              <p>
-                <span className="text-gray-500">Office: </span>
-                {dept.officeAddress}
-              </p>
-            )}
+            {dept.officeAddress && <Row label="Office">{dept.officeAddress}</Row>}
             {c.dueAt && (
-              <p>
-                <span className="text-gray-500">Expected by: </span>
+              <Row label="Expected by">
                 {fmt(c.dueAt)}
                 {c.isOverdue && (
-                  <span className="ml-2 text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">
+                  <span className="ml-2 text-xs font-semibold text-alert border border-alert rounded-sm px-2 py-0.5">
                     Overdue
                   </span>
                 )}
-              </p>
+              </Row>
             )}
-          </>
+          </dl>
         ) : (
-          <p className="text-gray-500">Department not assigned yet.</p>
+          <p className="text-ink-soft">This complaint has not been routed yet.</p>
         )}
-      </div>
+      </section>
 
-      <div className="bg-white rounded-xl shadow p-5">
-        <h2 className="font-semibold mb-3">Timeline</h2>
-        <ol className="space-y-3 border-l-2 border-gray-200 pl-4">
+      <section className="bg-white border border-line rounded-md p-5">
+        <h2 className="text-lg font-bold mb-4">Timeline</h2>
+        <ol className="border-l-2 border-line ml-1 space-y-5">
           {c.statusHistory.map((h, i) => (
-            <li key={i}>
-              <p className="font-medium">{label(h.status)}</p>
-              <p className="text-xs text-gray-500">
+            <li key={i} className="relative pl-5">
+              <span
+                className={`absolute -left-[7px] top-1.5 w-3 h-3 ${
+                  STATUS[h.status]?.dot || "bg-ink-soft"
+                }`}
+                aria-hidden="true"
+              />
+              <p className="font-semibold">{STATUS[h.status]?.label || h.status}</p>
+              <p className="text-xs text-ink-soft">
                 {fmt(h.at)}
-                {h.by?.name ? ` · by ${h.by.name}` : ""}
+                {h.by?.name ? `, by ${h.by.name}` : ""}
               </p>
-              {h.note && <p className="text-sm text-gray-600">{h.note}</p>}
+              {h.note && <p className="text-sm mt-1">{h.note}</p>}
             </li>
           ))}
         </ol>
-      </div>
+      </section>
     </div>
   );
 }

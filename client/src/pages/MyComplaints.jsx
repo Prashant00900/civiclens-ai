@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
-
-const STATUS_STYLES = {
-  submitted: "bg-gray-200 text-gray-800",
-  assigned: "bg-blue-100 text-blue-800",
-  in_progress: "bg-yellow-100 text-yellow-800",
-  resolved: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
-};
+import {
+  StatusMark,
+  SeverityMeter,
+  PriorityTag,
+  categoryLabel,
+} from "../components/ui";
 
 export default function MyComplaints() {
   const [items, setItems] = useState([]);
@@ -22,67 +20,86 @@ export default function MyComplaints() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p className="text-ink-soft">Loading your complaints...</p>;
 
   if (items.length === 0) {
     return (
-      <div className="bg-white p-8 rounded-xl shadow text-center">
-        <p className="text-gray-600 mb-3">You have not reported anything yet.</p>
-        <Link to="/new" className="text-blue-600 font-medium">
-          Report your first problem
+      <div className="max-w-3xl bg-white border border-line rounded-md p-8">
+        <h1 className="text-2xl font-bold mb-2">No complaints yet</h1>
+        <p className="text-ink-soft mb-4">
+          See a pothole, garbage pile or broken street light? Take a photo and
+          report it. We will route it to the right department.
+        </p>
+        <Link
+          to="/new"
+          className="inline-block bg-teal text-white font-medium px-4 py-2 rounded hover:bg-teal-dark"
+        >
+          Report a problem
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold">My Complaints</h1>
-      {items.map((c) => (
-        <div key={c._id} className="bg-white rounded-xl shadow p-4 flex gap-4">
-          {c.images?.[0] && (
-            <img
-              src={c.images[0].url}
-              alt={c.title}
-              className="w-24 h-24 object-cover rounded-lg"
-            />
-          )}
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-                            <Link
-                to={`/complaints/${c._id}`}
-                className="font-semibold text-blue-700 hover:underline"
-              >
-                {c.title}
-              </Link>
-              <span
-                className={`text-xs px-2 py-1 rounded-full ${STATUS_STYLES[c.status]}`}
-              >
-                {c.status.replace("_", " ")}
-              </span>
-            </div>
-            <p className="text-sm text-gray-600">{c.description}</p>
-            {c.aiSummary && (
-              <p className="text-sm text-purple-700 mt-1">AI: {c.aiSummary}</p>
+    <div className="max-w-3xl">
+      <div className="flex items-baseline justify-between mb-4">
+        <h1 className="text-2xl font-bold">My complaints</h1>
+        <span className="text-sm text-ink-soft">{items.length} in total</span>
+      </div>
+
+      <div className="space-y-3">
+        {items.map((c) => (
+          <article
+            key={c._id}
+            className="bg-white border border-line rounded-md p-4 flex gap-4"
+          >
+            {c.images?.[0] && (
+              <img
+                src={c.images[0].url}
+                alt={c.title}
+                className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded shrink-0"
+              />
             )}
-            <div className="flex gap-2 mt-2 text-xs">
-              <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800">
-                Severity {c.severity}/5
-              </span>
-              <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-800">
-                Priority {c.priorityScore}
-              </span>
-              <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-                {c.category.replace("_", " ")}
-              </span>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <Link
+                  to={`/complaints/${c._id}`}
+                  className="font-display font-bold text-lg leading-snug hover:underline"
+                >
+                  {c.title}
+                </Link>
+                <StatusMark status={c.status} />
+              </div>
+
+              <p className="text-sm text-ink-soft line-clamp-2 mt-1">
+                {c.description}
+              </p>
+
+              {c.aiSummary && (
+                <p className="text-sm text-teal mt-1">AI summary: {c.aiSummary}</p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
+                <SeverityMeter value={c.severity} />
+                <PriorityTag value={c.priorityScore} />
+                {c.reportCount > 1 && (
+                  <span className="text-xs font-semibold text-teal">
+                    {c.reportCount} people reported this
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-ink-soft">
+                <span>{c.trackingId}</span>
+                <span>{categoryLabel(c.category)}</span>
+                <span>{c.department?.name || "Unassigned"}</span>
+                <span>{new Date(c.createdAt).toLocaleDateString()}</span>
+              </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {c.trackingId} · {c.department?.name || "Unassigned"} ·{" "}
-              {new Date(c.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      ))}
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

@@ -41,7 +41,7 @@ const complaintSchema = new mongoose.Schema(
     category: { type: String, enum: CATEGORIES, default: "other" },
     severity: { type: Number, min: 1, max: 5, default: 1 },
     priorityScore: { type: Number, default: 0 },
-        aiSummary: { type: String },
+    aiSummary: { type: String },
     location: {
       type: { type: String, enum: ["Point"], default: "Point" },
       coordinates: { type: [Number], required: true }, // [lng, lat]
@@ -51,6 +51,7 @@ const complaintSchema = new mongoose.Schema(
     department: { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     reportCount: { type: Number, default: 1 },
+    supporters: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     statusHistory: [statusHistorySchema],
     resolution: {
       afterImage: { url: String, publicId: String },

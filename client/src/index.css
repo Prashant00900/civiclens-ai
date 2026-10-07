@@ -1,1 +1,46 @@
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Hind:wght@400;500;600&display=swap");
 @import "tailwindcss";
+
+@theme {
+  --font-display: "Archivo", system-ui, sans-serif;
+  --font-sans: "Hind", system-ui, sans-serif;
+
+  --color-ink: #1b2430;
+  --color-ink-soft: #4a5565;
+  --color-paper: #f1f3ef;
+  --color-line: #d9ddd6;
+  --color-signal: #f2b705;
+  --color-teal: #0e5f5b;
+  --color-teal-dark: #0a4744;
+  --color-alert: #b42318;
+}
+
+@layer base {
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    line-height: 1.55;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-signal);
+    outline-offset: 2px;
+  }
+}
+
+/* sadak ki peeli dashed center-line */
+.centerline {
+  height: 4px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-signal) 0 18px,
+    transparent 18px 32px
+  );
+}

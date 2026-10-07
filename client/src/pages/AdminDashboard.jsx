@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   PieChart,
@@ -12,25 +13,21 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import api from "../services/api";
-import { Link } from "react-router-dom";
+import {
+  StatusMark,
+  SeverityMeter,
+  PriorityTag,
+  STATUS,
+  categoryLabel,
+} from "../components/ui";
 
-const COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed", "#6b7280"];
+const COLORS = ["#1b2430", "#0e5f5b", "#f2b705", "#b42318", "#4a5565", "#8aa39f"];
 
 const NEXT = {
   submitted: "assigned",
   assigned: "in_progress",
   in_progress: "resolved",
 };
-
-const STATUS_STYLES = {
-  submitted: "bg-gray-200 text-gray-800",
-  assigned: "bg-blue-100 text-blue-800",
-  in_progress: "bg-yellow-100 text-yellow-800",
-  resolved: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
-};
-
-const label = (s) => s.replace("_", " ");
 
 export default function AdminDashboard() {
   const [summary, setSummary] = useState(null);
@@ -62,54 +59,60 @@ export default function AdminDashboard() {
   const changeStatus = async (id, next) => {
     try {
       await api.patch(`/complaints/${id}/status`, { status: next });
-      toast.success(`Marked as ${label(next)}`);
+      toast.success(`Marked as ${STATUS[next].label.toLowerCase()}`);
       load();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Update failed");
+      toast.error(err.response?.data?.message || "Could not update the status");
     }
   };
 
+  const s = summary?.byStatus || {};
   const statusData = summary
     ? Object.entries(summary.byStatus).map(([name, count]) => ({
-        name: label(name),
+        name: STATUS[name]?.label || name,
         count,
       }))
     : [];
 
-  const s = summary?.byStatus || {};
+  const stats = summary
+    ? [
+        ["Total complaints", summary.total],
+        ["New", s.submitted || 0],
+        ["In progress", (s.assigned || 0) + (s.in_progress || 0)],
+        ["Resolved", s.resolved || 0],
+        ["Average hours to resolve", summary.avgResolutionHours],
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {summary && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {[
-              ["Total", summary.total],
-              ["New", s.submitted || 0],
-              ["In progress", (s.assigned || 0) + (s.in_progress || 0)],
-              ["Resolved", s.resolved || 0],
-              ["Avg resolve (hrs)", summary.avgResolutionHours],
-            ].map(([name, value]) => (
-              <div key={name} className="bg-white rounded-xl shadow p-4">
-                <p className="text-sm text-gray-500">{name}</p>
-                <p className="text-2xl font-bold">{value}</p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-px bg-line border border-line rounded-md overflow-hidden">
+            {stats.map(([name, value], i) => (
+              <div
+                key={name}
+                className={`bg-white p-4 ${i === 4 ? "col-span-2 md:col-span-1" : ""}`}
+              >
+                <p className="text-sm text-ink-soft">{name}</p>
+                <p className="font-display text-3xl font-extrabold">{value}</p>
               </div>
             ))}
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl shadow p-4">
-              <p className="font-semibold mb-2">By category</p>
+            <section className="bg-white border border-line rounded-md p-4">
+              <h2 className="font-bold mb-2">Complaints by category</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                                    <Pie
+                  <Pie
                     data={summary.byCategory}
                     dataKey="value"
                     nameKey="name"
                     outerRadius={70}
-                    label={({ name, value }) => `${label(name)}: ${value}`}
+                    label={({ name, value }) => `${categoryLabel(name)}: ${value}`}
                   >
                     {summary.byCategory.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -118,28 +121,30 @@ export default function AdminDashboard() {
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-            </div>
-            <div className="bg-white rounded-xl shadow p-4">
-              <p className="font-semibold mb-2">By status</p>
+            </section>
+
+            <section className="bg-white border border-line rounded-md p-4">
+              <h2 className="font-bold mb-2">Complaints by status</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={statusData}>
                   <XAxis dataKey="name" />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#2563eb" />
+                  <Bar dataKey="count" fill="#0e5f5b" />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </section>
           </div>
         </>
       )}
 
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold">Complaints (highest priority first)</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold">Complaints, most urgent first</h2>
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="border rounded-lg p-2 text-sm"
+          aria-label="Filter by status"
+          className="border border-line bg-white rounded px-3 py-2 text-sm"
         >
           <option value="">All statuses</option>
           <option value="submitted">Submitted</option>
@@ -151,66 +156,71 @@ export default function AdminDashboard() {
       </div>
 
       {loading ? (
-        <p>Loading...</p>
+        <p className="text-ink-soft">Loading complaints...</p>
       ) : items.length === 0 ? (
-        <p className="text-gray-500">No complaints found.</p>
+        <p className="text-ink-soft">No complaints match this filter.</p>
       ) : (
         <div className="space-y-3">
           {items.map((c) => (
-            <div key={c._id} className="bg-white rounded-xl shadow p-4 flex gap-4">
+            <article
+              key={c._id}
+              className="bg-white border border-line rounded-md p-4 flex gap-4"
+            >
               {c.images?.[0] && (
                 <img
                   src={c.images[0].url}
                   alt={c.title}
-                  className="w-24 h-24 object-cover rounded-lg"
+                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded shrink-0"
                 />
               )}
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                                    <Link
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-3">
+                  <Link
                     to={`/complaints/${c._id}`}
-                    className="font-semibold text-blue-700 hover:underline"
+                    className="font-display font-bold text-lg leading-snug hover:underline"
                   >
                     {c.title}
                   </Link>
-                  <span className={`text-xs px-2 py-1 rounded-full ${STATUS_STYLES[c.status]}`}>
-                    {label(c.status)}
-                  </span>
+                  <StatusMark status={c.status} />
                 </div>
-                <p className="text-sm text-gray-600">{c.description}</p>
-                {c.aiSummary && (
-                  <p className="text-sm text-purple-700 mt-1">AI: {c.aiSummary}</p>
-                )}
-                <div className="flex flex-wrap gap-2 mt-2 text-xs">
-                  <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800">
-                    Severity {c.severity}/5
-                  </span>
-                  <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-800">
-                    Priority {c.priorityScore}
-                  </span>
-                  <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-                    {label(c.category)}
-                  </span>
-                  <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-                    {c.department?.name || "Unassigned"}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {c.trackingId} · by {c.reportedBy?.name} ·{" "}
-                  {new Date(c.createdAt).toLocaleDateString()}
+
+                <p className="text-sm text-ink-soft line-clamp-2 mt-1">
+                  {c.description}
                 </p>
+                {c.aiSummary && (
+                  <p className="text-sm text-teal mt-1">AI summary: {c.aiSummary}</p>
+                )}
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
+                  <SeverityMeter value={c.severity} />
+                  <PriorityTag value={c.priorityScore} />
+                  {c.reportCount > 1 && (
+                    <span className="text-xs font-semibold text-teal">
+                      {c.reportCount} people reported this
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-ink-soft">
+                  <span>{c.trackingId}</span>
+                  <span>{categoryLabel(c.category)}</span>
+                  <span>{c.department?.name || "Unassigned"}</span>
+                  <span>Reported by {c.reportedBy?.name}</span>
+                  <span>{new Date(c.createdAt).toLocaleDateString()}</span>
+                </div>
+
                 {NEXT[c.status] && (
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => changeStatus(c._id, NEXT[c.status])}
-                      className="bg-blue-600 text-white text-sm px-3 py-1 rounded-lg"
+                      className="bg-teal text-white text-sm font-medium px-3 py-1.5 rounded hover:bg-teal-dark"
                     >
-                      Mark {label(NEXT[c.status])}
+                      Mark {STATUS[NEXT[c.status]].label.toLowerCase()}
                     </button>
                     {c.status !== "in_progress" && (
                       <button
                         onClick={() => changeStatus(c._id, "rejected")}
-                        className="bg-red-100 text-red-700 text-sm px-3 py-1 rounded-lg"
+                        className="border border-alert text-alert text-sm font-medium px-3 py-1.5 rounded hover:bg-red-50"
                       >
                         Reject
                       </button>
@@ -218,10 +228,10 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
     </div>
   );
-} 
+}
