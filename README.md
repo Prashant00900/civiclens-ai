@@ -67,3 +67,7 @@ Create `server/.env` with: PORT, MONGO_URI, JWT_SECRET, CLIENT_URL, CLOUDINARY_C
 ## Author
 
 Prashant Rajpoot
+- Duplicate detection: a new report within 100 m of an open complaint of the same category is merged into it (MongoDB geo query), and the priority rises with the number of reports
+- Complaint detail page with department helpline, email, expected resolution date (SLA) and a full status timeline
+- AI assistant chat in Hindi, Hinglish, Punjabi or English that answers only from the citizen's own complaints (rate limited, never reveals other users' data), with voice input in Chrome and Edge
+- Road-signage inspired interface with a severity meter, designed to work on mobile
