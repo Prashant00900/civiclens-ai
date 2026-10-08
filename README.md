@@ -1,5 +1,6 @@
 # CivicLens AI
 
+![CivicLens AI dashboard](dashboard.png)
 An AI-powered civic complaint management system. Citizens report problems like potholes, garbage and broken street lights with a photo and GPS location. AI reads the photo and the text, fixes the category, rates how serious it is, and routes it to the right department. Admins get a priority-sorted dashboard to act on the most urgent issues first.
 
 **Live demo:** https://civiclens-ai-five.vercel.app
